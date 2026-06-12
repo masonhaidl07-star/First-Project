@@ -2,176 +2,85 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>LOOKSMAXX — The Glow-Up Playbook</title>
-  <meta name="description" content="Looksmaxxing, done right: skincare, fitness, grooming, style and sleep — the fundamentals, executed daily." />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>MOGCITY — Ascend or Stay NPC</title>
+  <meta name="description" content="The 3D looksmaxxing life-sim. Put your face on your character, grind the gym, cop skincare at Mogulta, and climb the city rankings." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;600;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="game.css" />
 </head>
 <body>
 
-  <nav class="nav">
-    <a class="brand" href="#top">LOOKS<span>MAXX</span></a>
-    <div class="nav-links">
-      <a href="#pillars">Pillars</a>
-      <a href="#routine">Routine</a>
-      <a href="#rules">Rules</a>
-      <a class="nav-cta" href="#routine">Start today</a>
-    </div>
-  </nav>
+  <!-- ===== Intro / character creation ===== -->
+  <div id="intro" class="overlay">
+    <div class="intro-card">
+      <h1 class="logo">MOG<span>CITY</span></h1>
+      <p class="tagline">The 3D looksmaxxing life-sim. Ascend or stay NPC.</p>
 
-  <header class="hero" id="top">
-    <div class="hero-glow"></div>
-    <p class="eyebrow">SELF-IMPROVEMENT, SYSTEMIZED</p>
-    <h1>Look better. Feel better.<br /><span class="gradient-text">Become unrecognizable.</span></h1>
-    <p class="hero-sub">
-      Looksmaxxing is just self-improvement with a plan — skincare, fitness, grooming and style,
-      done consistently. No gimmicks. No extremes. Just the fundamentals, executed daily.
-    </p>
-    <div class="hero-actions">
-      <a class="btn btn-primary" href="#routine">Start the routine</a>
-      <a class="btn btn-ghost" href="#pillars">Learn the pillars</a>
-    </div>
-    <div class="hero-stats">
-      <div class="stat"><strong>6</strong><span>pillars</span></div>
-      <div class="stat"><strong>13</strong><span>daily habits</span></div>
-      <div class="stat"><strong>30</strong><span>days to results</span></div>
-    </div>
-  </header>
+      <div id="intro-new">
+        <label class="field">
+          <span>Your name</span>
+          <input id="name-input" type="text" maxlength="14" placeholder="e.g. Wyatt" autocomplete="off" />
+        </label>
 
-  <main>
-    <section class="section" id="pillars">
-      <h2 class="section-title">The 6 Pillars</h2>
-      <p class="section-sub">Master these and everything else takes care of itself.</p>
-
-      <div class="grid">
-        <article class="card reveal">
-          <div class="card-icon">🧴</div>
-          <h3>Skincare</h3>
-          <ul>
-            <li>Cleanse twice a day — morning and night</li>
-            <li>SPF every morning. The #1 anti-aging move</li>
-            <li>Moisturize after every cleanse</li>
-            <li>Hands off your face — don't pick</li>
-          </ul>
-        </article>
-
-        <article class="card reveal">
-          <div class="card-icon">💈</div>
-          <h3>Hair &amp; Grooming</h3>
-          <ul>
-            <li>Find a good barber, ask what suits your face shape</li>
-            <li>Keep the neckline and edges tight between cuts</li>
-            <li>Brows: clean up strays only — keep it natural</li>
-            <li>Facial hair: line it up or shave it clean</li>
-          </ul>
-        </article>
-
-        <article class="card reveal">
-          <div class="card-icon">🏋️</div>
-          <h3>Fitness</h3>
-          <ul>
-            <li>Lift 3–4x a week — compound movements first</li>
-            <li>Protein with every meal</li>
-            <li>Walk 8k+ steps a day</li>
-            <li>The physique is built in the kitchen</li>
-          </ul>
-        </article>
-
-        <article class="card reveal">
-          <div class="card-icon">🦷</div>
-          <h3>Teeth &amp; Breath</h3>
-          <ul>
-            <li>Brush twice, floss once — every day</li>
-            <li>Tongue scraper changes the game</li>
-            <li>Whitening strips if you want the extra step</li>
-            <li>Don't skip the dentist</li>
-          </ul>
-        </article>
-
-        <article class="card reveal">
-          <div class="card-icon">😴</div>
-          <h3>Sleep &amp; Nutrition</h3>
-          <ul>
-            <li>7–9 hours, same schedule every night</li>
-            <li>2–3 liters of water a day</li>
-            <li>Whole foods 80% of the time</li>
-            <li>Cut the sugary drinks first</li>
-          </ul>
-        </article>
-
-        <article class="card reveal">
-          <div class="card-icon">🧍</div>
-          <h3>Style &amp; Posture</h3>
-          <ul>
-            <li>Fit beats brand — clothes that actually fit you</li>
-            <li>Build a base of neutral colors first</li>
-            <li>Stand tall: shoulders back, chin level</li>
-            <li>Dead hangs and face pulls fix desk posture</li>
-          </ul>
-        </article>
-      </div>
-    </section>
-
-    <section class="section" id="routine">
-      <h2 class="section-title">The Daily Routine</h2>
-      <p class="section-sub">Check items off as you go — your progress saves automatically and resets each morning.</p>
-
-      <div class="progress-wrap">
-        <div class="progress-label">
-          <span>Today's progress</span>
-          <span id="progress-count">0 / 13</span>
-        </div>
-        <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
-      </div>
-
-      <div class="routine-grid">
-        <div class="routine-col">
-          <h3>☀️ Morning</h3>
-          <label class="check"><input type="checkbox" data-habit="am-water" /><span>Glass of water before anything else</span></label>
-          <label class="check"><input type="checkbox" data-habit="am-cleanse" /><span>Cleanse face</span></label>
-          <label class="check"><input type="checkbox" data-habit="am-spf" /><span>Moisturizer + SPF</span></label>
-          <label class="check"><input type="checkbox" data-habit="am-teeth" /><span>Brush teeth + tongue scrape</span></label>
-          <label class="check"><input type="checkbox" data-habit="am-hair" /><span>Style hair</span></label>
-          <label class="check"><input type="checkbox" data-habit="am-posture" /><span>Posture check: shoulders back</span></label>
+        <label class="field">
+          <span>Your face (optional — stays on your device, never uploaded)</span>
+          <input id="photo-input" type="file" accept="image/*" capture="user" />
+        </label>
+        <div class="face-row">
+          <canvas id="face-preview" width="96" height="96"></canvas>
+          <div class="tones" id="tones"></div>
         </div>
 
-        <div class="routine-col">
-          <h3>🌙 Evening</h3>
-          <label class="check"><input type="checkbox" data-habit="pm-move" /><span>Trained or hit 8k steps today</span></label>
-          <label class="check"><input type="checkbox" data-habit="pm-protein" /><span>Got protein in every meal</span></label>
-          <label class="check"><input type="checkbox" data-habit="pm-cleanse" /><span>Cleanse face</span></label>
-          <label class="check"><input type="checkbox" data-habit="pm-moisturize" /><span>Moisturize</span></label>
-          <label class="check"><input type="checkbox" data-habit="pm-floss" /><span>Floss + brush</span></label>
-          <label class="check"><input type="checkbox" data-habit="pm-fit" /><span>Lay out tomorrow's fit</span></label>
-          <label class="check"><input type="checkbox" data-habit="pm-sleep" /><span>In bed on time (7–9h target)</span></label>
-        </div>
+        <button id="start-btn" class="big-btn">ENTER MOGCITY</button>
       </div>
 
-      <p class="routine-note" id="routine-note">Lock in. Day one starts now.</p>
-    </section>
+      <div id="intro-continue" class="hidden">
+        <p id="continue-label" class="continue-label"></p>
+        <button id="continue-btn" class="big-btn">CONTINUE</button>
+        <button id="newgame-btn" class="ghost-btn">Start over (wipes save)</button>
+      </div>
 
-    <section class="section" id="rules">
-      <h2 class="section-title">The Rules</h2>
-      <p class="section-sub">The mindset that makes everything above actually work.</p>
+      <p class="fine">Tips inside are real. The vibes are satire. <a href="playbook.html">📖 Read the Playbook</a></p>
+    </div>
+  </div>
 
-      <ol class="rules">
-        <li class="reveal"><strong>Consistency beats intensity.</strong> Give any change 30 days before judging it. The routine only works if you do.</li>
-        <li class="reveal"><strong>Health first, always.</strong> Anything that damages your body isn't maxxing — it's the opposite. Skip the extreme stuff.</li>
-        <li class="reveal"><strong>Sleep is the cheat code.</strong> Skin, gym recovery, mood, focus — everything works better on 8 hours.</li>
-        <li class="reveal"><strong>Confidence compounds.</strong> Posture, eye contact and a calm voice do more than any product you can buy.</li>
-        <li class="reveal"><strong>Compare yourself to yesterday-you.</strong> Not to filtered strangers on the internet. Run your own race.</li>
-      </ol>
-    </section>
-  </main>
+  <!-- ===== HUD ===== -->
+  <div id="hud" class="hidden">
+    <div id="player-card">
+      <div id="hud-name">—</div>
+      <div id="hud-title">NPC</div>
+      <div id="hud-aura">AURA 0</div>
+      <div class="bars">
+        <div class="bar"><span>SKIN</span><div class="track"><div id="bar-skin" class="fill"></div></div></div>
+        <div class="bar"><span>HAIR</span><div class="track"><div id="bar-hair" class="fill"></div></div></div>
+        <div class="bar"><span>FIT</span><div class="track"><div id="bar-fitness" class="fill"></div></div></div>
+        <div class="bar"><span>DRIP</span><div class="track"><div id="bar-drip" class="fill"></div></div></div>
+      </div>
+    </div>
+    <div id="cash">$0 MB</div>
+    <button id="lb-btn">🏆 Rankings</button>
+    <div id="hint"></div>
+    <div id="toast"></div>
+    <div id="joy"><div id="joy-knob"></div></div>
+    <button id="act-btn">ACT</button>
+    <div id="keys-help">WASD / arrows to move · E to interact</div>
+  </div>
 
-  <footer class="footer">
-    <p><span class="brand-mini">LOOKS<span>MAXX</span></span> — your glow-up playbook</p>
-    <p class="footer-fine">General wellness info, not medical advice.</p>
-  </footer>
+  <!-- ===== Store / quiz / leaderboard modal ===== -->
+  <div id="modal-wrap" class="overlay hidden">
+    <div id="modal">
+      <button id="modal-close">✕</button>
+      <div id="modal-body"></div>
+    </div>
+  </div>
 
-  <script src="script.js"></script>
+  <canvas id="game"></canvas>
+
+  <script type="importmap">
+    { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
+  </script>
+  <script type="module" src="game.js"></script>
 </body>
 </html>
