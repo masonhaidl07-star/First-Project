@@ -63,9 +63,19 @@
     <button id="lb-btn">🏆 Rankings</button>
     <div id="hint"></div>
     <div id="toast"></div>
+
+    <!-- Gym workout panel -->
+    <div id="workout" class="hidden">
+      <div id="workout-title"></div>
+      <div id="workout-reps"></div>
+      <div id="workout-bar"><div id="workout-fill"></div></div>
+      <div id="workout-note"></div>
+      <button id="workout-quit">Leave machine</button>
+    </div>
+
     <div id="joy"><div id="joy-knob"></div></div>
     <button id="act-btn">ACT</button>
-    <div id="keys-help">WASD / arrows to move · E to interact</div>
+    <div id="keys-help">WASD / arrows to move · drag to look · scroll to zoom · E to interact</div>
   </div>
 
   <!-- ===== Store / quiz / leaderboard modal ===== -->
@@ -79,7 +89,10 @@
   <canvas id="game"></canvas>
 
   <script type="importmap">
-    { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
+    { "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    } }
   </script>
   <script type="module" src="game.js"></script>
 </body>

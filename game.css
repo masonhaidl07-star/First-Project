@@ -151,6 +151,24 @@ html, body { height: 100%; overflow: hidden; background: var(--ink); font-family
   }
 }
 
+/* ===== Gym workout panel ===== */
+#workout {
+  position: absolute; bottom: 150px; left: 50%; transform: translateX(-50%);
+  width: min(360px, 90vw);
+  background: var(--panel); border: 1px solid var(--volt);
+  border-radius: 16px; padding: 16px 18px; text-align: center;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+}
+#workout-title { font-family: "Space Grotesk", sans-serif; font-weight: 700; font-size: 1.1rem; color: var(--volt); }
+#workout-reps { font-size: 0.85rem; color: #fff; margin: 6px 0 8px; font-weight: 600; }
+#workout-bar { height: 12px; border-radius: 99px; background: rgba(255,255,255,0.1); overflow: hidden; }
+#workout-fill { height: 100%; width: 0%; border-radius: 99px; background: linear-gradient(90deg, var(--cyan), var(--volt)); transition: width 0.12s; }
+#workout-note { font-size: 0.74rem; color: #9a9aa8; margin: 8px 0 10px; }
+#workout-quit {
+  background: none; border: 1px solid var(--border); color: #9a9aa8;
+  border-radius: 10px; padding: 8px 14px; font-size: 0.8rem; cursor: pointer;
+}
+
 /* ===== Modal ===== */
 #modal {
   position: relative;
