@@ -4,376 +4,386 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Robot Walk</title>
+<!-- Plain React via CDN. No build step, no JSX, no Babel: everything below
+     uses React.createElement (aliased to `h`). -->
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <style>
-  :root {
-    --bg-top: #0b1026;
-    --bg-bottom: #1b2350;
-    --accent: #46d6ff;
-    --panel: rgba(255, 255, 255, 0.06);
-  }
+  :root { --accent: #46d6ff; }
   * { box-sizing: border-box; }
   html, body {
-    margin: 0;
-    height: 100%;
+    margin: 0; height: 100%;
+    background: #0b1026;
+    color: #e8edff;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    color: #e8edff;
-    background: linear-gradient(180deg, var(--bg-top), var(--bg-bottom));
-    overflow: hidden;
   }
-  .stage {
-    position: relative;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
+  #root { min-height: 100%; display: flex; align-items: center; justify-content: center; padding: 24px; }
+  .app { width: min(880px, 96vw); }
+  .titlebar { display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; }
+  .titlebar h1 { margin: 0; font-size: clamp(18px, 3.5vw, 30px); letter-spacing: 2px; }
+  .titlebar h1 span { color: var(--accent); }
+  .titlebar small { opacity: .5; letter-spacing: 1px; }
+  .frame {
+    border-radius: 16px; overflow: hidden;
+    box-shadow: 0 24px 70px rgba(0,0,0,.5), inset 0 0 0 1px rgba(255,255,255,.07);
+    display: block; width: 100%;
   }
-  h1 {
-    margin: 0 0 4px;
-    font-size: clamp(20px, 4vw, 34px);
-    letter-spacing: 2px;
-    font-weight: 700;
+  .transport {
+    margin-top: 14px; display: flex; align-items: center; gap: 14px;
+    background: rgba(255,255,255,.06); padding: 12px 16px; border-radius: 12px;
+    backdrop-filter: blur(6px); flex-wrap: wrap;
   }
-  h1 span { color: var(--accent); }
-  .subtitle {
-    margin: 0 0 18px;
-    font-size: 13px;
-    opacity: 0.6;
-    letter-spacing: 1px;
+  .transport button {
+    background: var(--accent); color: #06223a; border: none;
+    width: 44px; height: 38px; border-radius: 9px; font-size: 16px; font-weight: 800; cursor: pointer;
   }
-  canvas {
-    background: linear-gradient(180deg, rgba(70,214,255,0.05), rgba(0,0,0,0.25));
-    border-radius: 16px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.45), inset 0 0 0 1px rgba(255,255,255,0.08);
-    max-width: 92vw;
-    touch-action: none;
+  .transport button:hover { filter: brightness(1.08); }
+  .scrub { flex: 1; min-width: 180px; display: flex; align-items: center; gap: 10px; }
+  .scrub input[type=range] { flex: 1; accent-color: var(--accent); cursor: pointer; }
+  .time { font-variant-numeric: tabular-nums; font-size: 13px; opacity: .8; min-width: 92px; text-align: right; }
+  .chip {
+    font-size: 11px; letter-spacing: 1px; opacity: .7; cursor: pointer;
+    background: transparent; border: 1px solid rgba(255,255,255,.2); color: inherit;
+    padding: 6px 10px; border-radius: 999px;
   }
-  .controls {
-    margin-top: 18px;
-    display: flex;
-    gap: 14px;
-    align-items: center;
-    flex-wrap: wrap;
-    justify-content: center;
-    background: var(--panel);
-    padding: 12px 18px;
-    border-radius: 999px;
-    backdrop-filter: blur(6px);
-  }
-  button {
-    background: var(--accent);
-    color: #06223a;
-    border: none;
-    padding: 9px 18px;
-    border-radius: 999px;
-    font-weight: 700;
-    font-size: 14px;
-    cursor: pointer;
-    transition: transform .12s ease, filter .12s ease;
-  }
-  button.secondary {
-    background: transparent;
-    color: #e8edff;
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.25);
-  }
-  button:hover { filter: brightness(1.08); transform: translateY(-1px); }
-  button:active { transform: translateY(0); }
-  .slider {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 13px;
-    opacity: 0.85;
-  }
-  input[type=range] { accent-color: var(--accent); cursor: pointer; }
-  .hint { margin-top: 10px; font-size: 11px; opacity: 0.4; letter-spacing: 1px; }
+  .chip:hover { border-color: var(--accent); color: var(--accent); }
 </style>
 </head>
 <body>
-<div class="stage">
-  <h1>ROBOT<span>WALK</span></h1>
-  <p class="subtitle">a self-contained canvas animation</p>
-
-  <canvas id="scene" width="640" height="360"></canvas>
-
-  <div class="controls">
-    <button id="toggle">Pause</button>
-    <div class="slider">
-      <label for="speed">Speed</label>
-      <input id="speed" type="range" min="0.2" max="3" step="0.1" value="1">
-    </div>
-    <button id="dir" class="secondary">Turn Around</button>
-  </div>
-  <p class="hint">click the canvas to make the robot wave</p>
-</div>
-
+<div id="root"></div>
 <script>
 (function () {
-  const canvas = document.getElementById('scene');
-  const ctx = canvas.getContext('2d');
-  const W = canvas.width, H = canvas.height;
+  "use strict";
+  const { useState, useRef, useEffect, createElement: h } = React;
 
-  let running = true;
-  let speed = 1;
-  let facing = 1;          // 1 = right, -1 = left
-  let t = 0;               // animation phase
-  let worldX = 0;          // for parallax ground scroll
-  let waveTimer = 0;       // brief wave gesture countdown
+  // ───────────────────────────── Timeline engine ─────────────────────────────
+  // Easing functions, t in [0,1].
+  const Ease = {
+    linear: t => t,
+    in:     t => t * t * t,
+    out:    t => 1 - Math.pow(1 - t, 3),
+    inOut:  t => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2),
+    back:   t => { const c = 1.70158; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); },
+    bounce: t => {
+      const n = 7.5625, d = 2.75;
+      if (t < 1 / d) return n * t * t;
+      if (t < 2 / d) return n * (t -= 1.5 / d) * t + 0.75;
+      if (t < 2.5 / d) return n * (t -= 2.25 / d) * t + 0.9375;
+      return n * (t -= 2.625 / d) * t + 0.984375;
+    },
+  };
 
-  const groundY = H - 70;
+  // Map x from input range to output range with easing. Clamps outside the range.
+  function interpolate(x, inRange, outRange, ease = Ease.linear) {
+    const [x0, x1] = inRange, [y0, y1] = outRange;
+    if (x <= x0) return y0;
+    if (x >= x1) return y1;
+    return y0 + (y1 - y0) * ease((x - x0) / (x1 - x0));
+  }
 
-  // --- Background star field (static, generated once) ---
-  const stars = Array.from({ length: 70 }, () => ({
-    x: Math.random() * W,
-    y: Math.random() * (groundY - 40),
-    r: Math.random() * 1.4 + 0.3,
-    a: Math.random() * 0.6 + 0.2
-  }));
-
-  function drawBackground() {
-    // sky already from canvas bg, add stars
-    for (const s of stars) {
-      ctx.globalAlpha = s.a;
-      ctx.fillStyle = '#bfe9ff';
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-      ctx.fill();
+  // Evaluate a keyframe track at time t. keys: [{ t, v, ease? }] sorted by t.
+  // ease on a key describes the segment ENTERING that key.
+  function animate(t, keys) {
+    if (t <= keys[0].t) return keys[0].v;
+    for (let i = 0; i < keys.length - 1; i++) {
+      const a = keys[i], b = keys[i + 1];
+      if (t >= a.t && t <= b.t) return interpolate(t, [a.t, b.t], [a.v, b.v], b.ease || Ease.linear);
     }
-    ctx.globalAlpha = 1;
+    return keys[keys.length - 1].v;
+  }
 
-    // distant hills
-    ctx.fillStyle = 'rgba(70,214,255,0.07)';
-    ctx.beginPath();
-    ctx.moveTo(0, groundY);
-    for (let x = 0; x <= W; x += 20) {
-      const y = groundY - 30 - 25 * Math.sin((x + worldX * 0.2) * 0.012);
-      ctx.lineTo(x, y);
+  const fmt = s => `${Math.floor(s / 60)}:${(s % 60).toFixed(2).padStart(5, "0")}`;
+
+  // <Stage> drives a looping clock and renders children(time). It also owns the
+  // transport UI: play/pause, a scrubber, a time readout, and quick-seek chips.
+  function Stage({ duration, markers = [], children }) {
+    const [time, setTime] = useState(0);
+    const [playing, setPlaying] = useState(true);
+    const raf = useRef(0), last = useRef(null), timeRef = useRef(0);
+    timeRef.current = time;
+
+    useEffect(() => {
+      function loop(now) {
+        if (last.current == null) last.current = now;
+        const dt = (now - last.current) / 1000; last.current = now;
+        if (playing) setTime(t => (t + dt) % duration);
+        raf.current = requestAnimationFrame(loop);
+      }
+      raf.current = requestAnimationFrame(loop);
+      return () => { cancelAnimationFrame(raf.current); last.current = null; };
+    }, [playing, duration]);
+
+    const seek = v => { setPlaying(false); setTime(Math.max(0, Math.min(duration, v))); };
+
+    return h("div", null,
+      children(time),
+      h("div", { className: "transport" },
+        h("button", { onClick: () => setPlaying(p => !p), title: "Play / Pause" }, playing ? "❚❚" : "►"),
+        h("div", { className: "scrub" },
+          h("input", {
+            type: "range", min: 0, max: duration, step: 0.01, value: time,
+            onChange: e => seek(parseFloat(e.target.value)),
+          }),
+        ),
+        h("div", { className: "time" }, `${fmt(time)} / ${fmt(duration)}`),
+        markers.map(m =>
+          h("button", { key: m.t, className: "chip", onClick: () => seek(m.t) }, m.label)),
+      ),
+    );
+  }
+
+  // ───────────────────────────── Scene primitives ─────────────────────────────
+  const C = { metal: "#cdd6f4", metalDark: "#8b93b8", accent: "#46d6ff", dark: "#101830" };
+
+  // A two-segment limb (thigh + shin) built from nested rotations so the knee
+  // follows the thigh. Angles in degrees; 0 points straight down.
+  function Limb({ x, y, upper, lower, thigh, knee, width, color, foot }) {
+    return h("g", { transform: `translate(${x},${y}) rotate(${thigh})` },
+      h("line", { x1: 0, y1: 0, x2: 0, y2: upper, stroke: color, strokeWidth: width, strokeLinecap: "round" }),
+      h("g", { transform: `translate(0,${upper}) rotate(${knee})` },
+        h("line", { x1: 0, y1: 0, x2: 0, y2: lower, stroke: color, strokeWidth: width, strokeLinecap: "round" }),
+        foot && h("ellipse", { cx: 4, cy: lower, rx: 11, ry: 4.5, fill: C.accent }),
+      ),
+    );
+  }
+
+  // The robot. `pose` carries every animatable value; RobotWalkScene computes it.
+  function Robot({ pose }) {
+    const p = pose;
+    const dizzy = p.bodyPitch > 45; // X_X eyes once we're past the point of no return
+    const eye = (cx) => dizzy
+      ? h("g", { stroke: C.accent, strokeWidth: 2.4, strokeLinecap: "round" },
+          h("line", { x1: cx - 4, y1: -38, x2: cx + 4, y2: -30 }),
+          h("line", { x1: cx + 4, y1: -38, x2: cx - 4, y2: -30 }))
+      : h("ellipse", { cx, cy: -34, rx: 4, ry: 5 * p.blink, fill: C.accent });
+
+    return h("g", { transform: `translate(${p.x},${p.y})` },
+      // ground shadow (stays on the floor, shrinks as the robot lifts/falls)
+      h("ellipse", { cx: 0, cy: 70, rx: Math.max(10, 40 - p.drop * 0.25), ry: 7,
+        fill: "rgba(0,0,0,.35)" }),
+
+      // everything that can tip over rotates around the hip
+      h("g", { transform: `translate(0,${p.drop}) rotate(${p.bodyPitch})` },
+        // legs (drawn from the hip downward)
+        Limb({ x: -9, y: 0, upper: 34, lower: 34, thigh: p.legBack, knee: p.kneeBack, width: 11, color: C.metalDark, foot: true }),
+        Limb({ x: 9, y: 0, upper: 34, lower: 34, thigh: p.legFront, knee: p.kneeFront, width: 11, color: C.metal, foot: true }),
+
+        // arms (behind first, then in front)
+        Limb({ x: -22, y: -38, upper: 20, lower: 18, thigh: p.armBack, knee: p.armBack * 0.4, width: 9, color: C.metalDark }),
+
+        // torso
+        h("rect", { x: -28, y: -52, width: 56, height: 56, rx: 12, fill: C.metal }),
+        h("rect", { x: -28, y: -20, width: 56, height: 24, rx: 10, fill: C.metalDark }),
+        h("circle", { cx: 0, cy: -28, r: 9, fill: C.accent }),
+        h("circle", { cx: -3, cy: -31, r: 3, fill: "rgba(255,255,255,.85)" }),
+
+        // head
+        h("rect", { x: -6, y: -64, width: 12, height: 14, fill: C.metalDark }),
+        h("g", { transform: `rotate(${p.headPitch})` },
+          h("rect", { x: -25, y: -98, width: 50, height: 42, rx: 12, fill: C.metal }),
+          h("rect", { x: -18, y: -92, width: 36, height: 20, rx: 8, fill: C.dark }),
+          eye(-8), eye(8),
+          h("line", { x1: 0, y1: -98, x2: 0, y2: -112, stroke: C.metalDark, strokeWidth: 3 }),
+          h("circle", { cx: 0, cy: -115, r: 4, fill: C.accent }),
+        ),
+
+        // front arm last so it reads on top of the torso
+        Limb({ x: 22, y: -38, upper: 20, lower: 18, thigh: p.armFront, knee: p.armFront * 0.4, width: 9, color: C.metal }),
+      ),
+    );
+  }
+
+  // A single building with lit windows.
+  function Building({ x, w, hgt, baseY, color }) {
+    const win = [];
+    for (let wy = baseY - hgt + 14; wy < baseY - 12; wy += 22)
+      for (let wx = x + 8; wx < x + w - 10; wx += 18)
+        win.push(h("rect", { key: wx + "_" + wy, x: wx, y: wy, width: 8, height: 11, rx: 1,
+          fill: (wx * 7 + wy * 13) % 5 === 0 ? "rgba(70,214,255,.55)" : "rgba(255,255,255,.10)" }));
+    return h("g", null,
+      h("rect", { x, y: baseY - hgt, width: w, height: hgt, fill: color }),
+      win);
+  }
+
+  // A parallax layer of buildings that scrolls with the world and wraps around.
+  function BuildingLayer({ scroll, baseY, color, seed, count }) {
+    const span = 900;
+    const off = ((scroll % span) + span) % span;
+    const items = [];
+    for (let k = -1; k < count + 1; k++) {
+      const i = ((k % count) + count) % count;
+      const r = (n) => (Math.sin((seed + i) * n) * 0.5 + 0.5);
+      const w = 70 + r(12.9) * 70;
+      const hgt = 70 + r(78.2) * 150;
+      const x = -off + k * (span / count) + r(3.3) * 20;
+      items.push(h("g", { key: k }, Building({ x, w, hgt, baseY, color })));
     }
-    ctx.lineTo(W, groundY);
-    ctx.closePath();
-    ctx.fill();
+    return h("g", null, items);
   }
 
-  function drawGround() {
-    ctx.fillStyle = 'rgba(255,255,255,0.04)';
-    ctx.fillRect(0, groundY, W, H - groundY);
-    ctx.strokeStyle = 'rgba(70,214,255,0.35)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(0, groundY);
-    ctx.lineTo(W, groundY);
-    ctx.stroke();
+  // ───────────────────────────── The walk + the gag ─────────────────────────────
+  const DURATION = 12;     // loop length (s)
+  const TRIP = 7.7;        // the famous stumble
+  const GROUND_Y = 300;
+  const ROBOT_X = 360;
+  const V = 70;            // world units / second while walking
 
-    // moving floor dashes for sense of motion
-    ctx.strokeStyle = 'rgba(70,214,255,0.18)';
-    ctx.lineWidth = 3;
-    const spacing = 60;
-    const offset = (worldX % spacing + spacing) % spacing;
-    for (let x = -offset; x < W; x += spacing) {
-      ctx.beginPath();
-      ctx.moveTo(x, groundY + 22);
-      ctx.lineTo(x + 26, groundY + 22);
-      ctx.stroke();
+  // World scroll as a closed-form function of time so scrubbing stays exact.
+  // Walk → freeze at the trip → resume after recovery (as if 3s never happened).
+  function worldXAt(t) {
+    if (t < 7.55) return V * t;
+    if (t < 10.55) return V * 7.55;
+    return V * (t - 3.0);
+  }
+
+  // Compute the full robot pose for a given time.
+  function poseAt(t) {
+    const phase = worldXAt(t) * 0.075;       // leg phase tracks the ground
+    const swing = Math.sin(phase);
+    const lift = Math.max(0, -Math.cos(phase));
+
+    // Default: a relaxed walk cycle.
+    const pose = {
+      x: ROBOT_X, y: GROUND_Y - 70, drop: 0,
+      legFront:  swing * 24,
+      legBack:  -swing * 24,
+      kneeFront: lift * 26,
+      kneeBack:  (1 - lift) * 26,
+      armFront: -swing * 20,
+      armBack:   swing * 20,
+      bodyPitch: 3 * Math.sin(phase * 2) + 4,   // gentle forward lean
+      headPitch: 2 * Math.sin(phase * 2),
+      blink: Math.sin(t * 3.1) > 0.96 ? 0.15 : 1,
+      drop: -Math.abs(Math.sin(phase)) * 4,     // body bob
+    };
+
+    // The trip: foot catches at TRIP, body pitches over, faceplant, recover.
+    if (t >= 7.5 && t <= 10.7) {
+      pose.bodyPitch = animate(t, [
+        { t: 7.5,  v: pose.bodyPitch },
+        { t: 7.7,  v: 8,   ease: Ease.out },     // toe catches, torso jolts
+        { t: 8.05, v: 42,  ease: Ease.in },      // tipping past recovery
+        { t: 8.45, v: 86,  ease: Ease.in },      // face toward the floor
+        { t: 8.7,  v: 90,  ease: Ease.bounce },  // flat, with a little oof
+        { t: 9.6,  v: 90 },                       // lying there, regretting it
+        { t: 10.2, v: 38,  ease: Ease.out },     // pushing back up
+        { t: 10.7, v: 4,   ease: Ease.back },    // upright, slight overshoot
+      ]);
+      pose.drop = animate(t, [
+        { t: 7.5,  v: pose.drop },
+        { t: 7.7,  v: -2 },
+        { t: 8.45, v: 28,  ease: Ease.in },
+        { t: 8.7,  v: 40,  ease: Ease.bounce },  // chest near the ground
+        { t: 9.6,  v: 40 },
+        { t: 10.2, v: 12,  ease: Ease.out },
+        { t: 10.7, v: 0,   ease: Ease.out },
+      ]);
+      // arms flail up, then sprawl, then push off the ground
+      pose.armFront = animate(t, [
+        { t: 7.6, v: pose.armFront },
+        { t: 7.85, v: -150, ease: Ease.out },
+        { t: 8.5,  v: -40,  ease: Ease.in },
+        { t: 9.6,  v: -30 },
+        { t: 10.2, v: 20,   ease: Ease.out },
+        { t: 10.7, v: 0 },
+      ]);
+      pose.armBack = animate(t, [
+        { t: 7.6, v: pose.armBack },
+        { t: 7.85, v: 150, ease: Ease.out },
+        { t: 8.5,  v: 40,  ease: Ease.in },
+        { t: 9.6,  v: 30 },
+        { t: 10.2, v: -20, ease: Ease.out },
+        { t: 10.7, v: 0 },
+      ]);
+      // the offending front leg snags, the back leg swings up behind
+      pose.legFront = animate(t, [
+        { t: 7.55, v: pose.legFront }, { t: 7.7, v: -18, ease: Ease.out },
+        { t: 8.5, v: -25 }, { t: 10.2, v: -10, ease: Ease.out }, { t: 10.7, v: pose.legFront },
+      ]);
+      pose.legBack = animate(t, [
+        { t: 7.55, v: pose.legBack }, { t: 7.9, v: 30, ease: Ease.out },
+        { t: 8.5, v: 22 }, { t: 10.2, v: 10, ease: Ease.out }, { t: 10.7, v: pose.legBack },
+      ]);
+      pose.kneeFront = 10; pose.kneeBack = 18;
+      pose.headPitch = animate(t, [
+        { t: 7.6, v: 0 }, { t: 8.5, v: 12 }, { t: 9.6, v: 12 }, { t: 10.7, v: 0 },
+      ]);
     }
+    return pose;
   }
 
-  // Draw the robot centered at (cx, baseY) where baseY is foot contact line.
-  function drawRobot(cx, baseY) {
-    const swing = Math.sin(t);            // leg/arm swing
-    const swing2 = Math.sin(t + Math.PI); // opposite phase
-    const bob = Math.abs(Math.sin(t)) * 4; // vertical body bob
-    const bodyY = baseY - 90 - bob;
+  function RobotWalkScene(time) {
+    const t = time % DURATION;
+    const scroll = worldXAt(t);
+    const tripping = t > 7.7 && t < 8.7;
 
-    ctx.save();
-    ctx.translate(cx, 0);
-    ctx.scale(facing, 1);   // flip horizontally based on direction
+    return h("svg", { className: "frame", viewBox: "0 0 720 360",
+        preserveAspectRatio: "xMidYMid meet" },
+      h("defs", null,
+        h("linearGradient", { id: "sky", x1: 0, y1: 0, x2: 0, y2: 1 },
+          h("stop", { offset: "0%", stopColor: "#0b1026" }),
+          h("stop", { offset: "70%", stopColor: "#1b2350" }),
+          h("stop", { offset: "100%", stopColor: "#27305f" })),
+      ),
+      h("rect", { x: 0, y: 0, width: 720, height: 360, fill: "url(#sky)" }),
 
-    const metal = '#cdd6f4';
-    const metalDark = '#8b93b8';
-    const accent = '#46d6ff';
+      // stars
+      h("g", { fill: "#bfe9ff" },
+        Array.from({ length: 50 }, (_, i) => h("circle", {
+          key: i, cx: (i * 137.5) % 720, cy: (i * 53) % 200,
+          r: (i % 3) * 0.5 + 0.4, opacity: 0.25 + (i % 5) * 0.12 }))),
 
-    // shadow
-    ctx.fillStyle = 'rgba(0,0,0,0.35)';
-    ctx.beginPath();
-    ctx.ellipse(0, baseY + 6, 42 - bob, 8, 0, 0, Math.PI * 2);
-    ctx.fill();
+      // parallax cityscape, far → near
+      BuildingLayer({ scroll: scroll * 0.18, baseY: 300, color: "rgba(70,214,255,.10)", seed: 1, count: 6 }),
+      BuildingLayer({ scroll: scroll * 0.4,  baseY: 305, color: "rgba(40,60,120,.55)",  seed: 2, count: 7 }),
 
-    // legs (hip at bodyY+50)
-    const hipY = bodyY + 50;
-    drawLeg(-10, hipY, baseY, swing, metalDark, accent);
-    drawLeg(10, hipY, baseY, swing2, metal, accent);
+      // ground
+      h("rect", { x: 0, y: GROUND_Y, width: 720, height: 60, fill: "rgba(255,255,255,.04)" }),
+      h("line", { x1: 0, y1: GROUND_Y, x2: 720, y2: GROUND_Y, stroke: "rgba(70,214,255,.35)", strokeWidth: 2 }),
+      h("g", { stroke: "rgba(70,214,255,.18)", strokeWidth: 3 },
+        Array.from({ length: 14 }, (_, i) => {
+          const x = ((i * 60 - (scroll % 60)) % 780 + 780) % 780 - 30;
+          return h("line", { key: i, x1: x, y1: GROUND_Y + 20, x2: x + 26, y2: GROUND_Y + 20 });
+        })),
 
-    // body
-    roundRect(-30, bodyY, 60, 60, 12);
-    ctx.fillStyle = metal;
-    ctx.fill();
-    ctx.fillStyle = metalDark;
-    roundRect(-30, bodyY + 38, 60, 22, 10);
-    ctx.fill();
+      // a little stray bolt on the ground — the thing it trips over
+      (function () {
+        const bx = ROBOT_X + (worldXAt(TRIP) - scroll) + 22;
+        return h("g", { transform: `translate(${bx}, ${GROUND_Y - 4})` },
+          h("rect", { x: -5, y: -3, width: 10, height: 6, rx: 1, fill: C.metalDark }),
+          h("rect", { x: -2, y: -8, width: 4, height: 6, fill: C.metal }));
+      })(),
 
-    // chest light
-    ctx.fillStyle = accent;
-    ctx.beginPath();
-    ctx.arc(0, bodyY + 22, 9, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,0.8)';
-    ctx.beginPath();
-    ctx.arc(-3, bodyY + 19, 3, 0, Math.PI * 2);
-    ctx.fill();
+      h(Robot, { pose: poseAt(t) }),
 
-    // arms (shoulder at bodyY+10). One arm waves if waveTimer active.
-    const waving = waveTimer > 0;
-    drawArm(-26, bodyY + 12, swing2 * 0.8, metalDark, accent, false);
-    drawArm(26, bodyY + 12, swing * 0.8, metal, accent, waving);
-
-    // neck + head
-    ctx.fillStyle = metalDark;
-    ctx.fillRect(-6, bodyY - 12, 12, 14);
-    roundRect(-26, bodyY - 52, 52, 44, 12);
-    ctx.fillStyle = metal;
-    ctx.fill();
-
-    // visor
-    ctx.fillStyle = '#101830';
-    roundRect(-19, bodyY - 44, 38, 20, 8);
-    ctx.fill();
-
-    // eyes
-    const blink = (Math.sin(t * 0.6) > 0.97) ? 0.2 : 1;
-    ctx.fillStyle = accent;
-    ctx.beginPath();
-    ctx.ellipse(-8, bodyY - 34, 4, 5 * blink, 0, 0, Math.PI * 2);
-    ctx.ellipse(8, bodyY - 34, 4, 5 * blink, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // antenna
-    ctx.strokeStyle = metalDark;
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(0, bodyY - 52);
-    ctx.lineTo(0, bodyY - 66);
-    ctx.stroke();
-    ctx.fillStyle = accent;
-    ctx.beginPath();
-    ctx.arc(0, bodyY - 70, 4, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.restore();
+      // gag caption
+      tripping && h("text", {
+        x: ROBOT_X + 70, y: GROUND_Y - 120, fill: C.accent, fontSize: 26,
+        fontFamily: "monospace", fontWeight: "bold",
+        opacity: interpolate(t, [7.7, 7.9], [0, 1]) * interpolate(t, [8.4, 8.7], [1, 0]),
+        transform: `rotate(-8 ${ROBOT_X + 70} ${GROUND_Y - 120})`,
+      }, "whoa—!"),
+    );
   }
 
-  function drawLeg(x, hipY, baseY, swing, color, accent) {
-    const legLen = baseY - hipY;
-    const angle = swing * 0.5;                  // thigh angle
-    const kneeX = x + Math.sin(angle) * legLen * 0.5;
-    const kneeY = hipY + Math.cos(angle) * legLen * 0.5;
-    // lift foot a bit when swinging forward
-    const lift = Math.max(0, swing) * 10;
-    const footX = kneeX + Math.sin(angle * 0.6) * legLen * 0.5;
-    const footY = baseY - lift;
-
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 11;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(x, hipY);
-    ctx.lineTo(kneeX, kneeY);
-    ctx.lineTo(footX, footY);
-    ctx.stroke();
-
-    // foot
-    ctx.fillStyle = accent;
-    ctx.beginPath();
-    ctx.ellipse(footX + 4, footY, 12, 5, 0, 0, Math.PI * 2);
-    ctx.fill();
+  // ───────────────────────────── Mount ─────────────────────────────
+  function App() {
+    return h("div", { className: "app" },
+      h("div", { className: "titlebar" },
+        h("h1", null, "ROBOT", h("span", null, "WALK")),
+        h("small", null, "plain React.createElement · timeline + keyframes")),
+      h(Stage, {
+        duration: DURATION,
+        markers: [
+          { t: 0, label: "start" },
+          { t: TRIP, label: "trip @7.7s" },
+          { t: 10.7, label: "recovered" },
+        ],
+      }, time => RobotWalkScene(time)),
+    );
   }
 
-  function drawArm(x, shoulderY, swing, color, accent, waving) {
-    let elbowX, elbowY, handX, handY;
-    if (waving) {
-      // raise the arm up and oscillate the forearm
-      const w = Math.sin(t * 6) * 0.5;
-      elbowX = x + 18;
-      elbowY = shoulderY - 18;
-      handX = elbowX + 16 + w * 6;
-      handY = elbowY - 18 + Math.abs(w) * 4;
-    } else {
-      const angle = swing * 0.7;
-      elbowX = x + Math.sin(angle) * 22;
-      elbowY = shoulderY + Math.cos(angle) * 22;
-      handX = elbowX + Math.sin(angle * 1.2) * 20;
-      handY = elbowY + Math.cos(angle * 1.2) * 20;
-    }
-
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 9;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(x, shoulderY);
-    ctx.lineTo(elbowX, elbowY);
-    ctx.lineTo(handX, handY);
-    ctx.stroke();
-
-    ctx.fillStyle = accent;
-    ctx.beginPath();
-    ctx.arc(handX, handY, 6, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  function roundRect(x, y, w, h, r) {
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.arcTo(x + w, y, x + w, y + h, r);
-    ctx.arcTo(x + w, y + h, x, y + h, r);
-    ctx.arcTo(x, y + h, x, y, r);
-    ctx.arcTo(x, y, x + w, y, r);
-    ctx.closePath();
-  }
-
-  let last = performance.now();
-  function frame(now) {
-    const dt = Math.min(0.05, (now - last) / 1000);
-    last = now;
-
-    if (running) {
-      t += dt * 6 * speed;
-      worldX += dt * 80 * speed * facing;  // ground scrolls opposite to facing
-      if (waveTimer > 0) waveTimer -= dt;
-    }
-
-    ctx.clearRect(0, 0, W, H);
-    drawBackground();
-    drawGround();
-    drawRobot(W / 2, groundY);
-
-    requestAnimationFrame(frame);
-  }
-  requestAnimationFrame(frame);
-
-  // --- Controls ---
-  const toggleBtn = document.getElementById('toggle');
-  toggleBtn.addEventListener('click', () => {
-    running = !running;
-    toggleBtn.textContent = running ? 'Pause' : 'Play';
-  });
-
-  document.getElementById('speed').addEventListener('input', (e) => {
-    speed = parseFloat(e.target.value);
-  });
-
-  document.getElementById('dir').addEventListener('click', () => {
-    facing *= -1;
-  });
-
-  canvas.addEventListener('click', () => {
-    waveTimer = 1.6;
-  });
-
-  // Keyboard niceties
-  window.addEventListener('keydown', (e) => {
-    if (e.code === 'Space') { e.preventDefault(); toggleBtn.click(); }
-    if (e.code === 'ArrowLeft') facing = -1;
-    if (e.code === 'ArrowRight') facing = 1;
-  });
+  ReactDOM.createRoot(document.getElementById("root")).render(h(App));
 })();
 </script>
 </body>
