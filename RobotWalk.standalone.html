@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Robot Walk</title>
+<style>
+  :root {
+    --bg-top: #0b1026;
+    --bg-bottom: #1b2350;
+    --accent: #46d6ff;
+    --panel: rgba(255, 255, 255, 0.06);
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: #e8edff;
+    background: linear-gradient(180deg, var(--bg-top), var(--bg-bottom));
+    overflow: hidden;
+  }
+  .stage {
+    position: relative;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  h1 {
+    margin: 0 0 4px;
+    font-size: clamp(20px, 4vw, 34px);
+    letter-spacing: 2px;
+    font-weight: 700;
+  }
+  h1 span { color: var(--accent); }
+  .subtitle {
+    margin: 0 0 18px;
+    font-size: 13px;
+    opacity: 0.6;
+    letter-spacing: 1px;
+  }
+  canvas {
+    background: linear-gradient(180deg, rgba(70,214,255,0.05), rgba(0,0,0,0.25));
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.45), inset 0 0 0 1px rgba(255,255,255,0.08);
+    max-width: 92vw;
+    touch-action: none;
+  }
+  .controls {
+    margin-top: 18px;
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+    background: var(--panel);
+    padding: 12px 18px;
+    border-radius: 999px;
+    backdrop-filter: blur(6px);
+  }
+  button {
+    background: var(--accent);
+    color: #06223a;
+    border: none;
+    padding: 9px 18px;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    transition: transform .12s ease, filter .12s ease;
+  }
+  button.secondary {
+    background: transparent;
+    color: #e8edff;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.25);
+  }
+  button:hover { filter: brightness(1.08); transform: translateY(-1px); }
+  button:active { transform: translateY(0); }
+  .slider {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    opacity: 0.85;
+  }
+  input[type=range] { accent-color: var(--accent); cursor: pointer; }
+  .hint { margin-top: 10px; font-size: 11px; opacity: 0.4; letter-spacing: 1px; }
+</style>
+</head>
+<body>
+<div class="stage">
+  <h1>ROBOT<span>WALK</span></h1>
+  <p class="subtitle">a self-contained canvas animation</p>
+
+  <canvas id="scene" width="640" height="360"></canvas>
+
+  <div class="controls">
+    <button id="toggle">Pause</button>
+    <div class="slider">
+      <label for="speed">Speed</label>
+      <input id="speed" type="range" min="0.2" max="3" step="0.1" value="1">
+    </div>
+    <button id="dir" class="secondary">Turn Around</button>
+  </div>
+  <p class="hint">click the canvas to make the robot wave</p>
+</div>
+
+<script>
+(function () {
+  const canvas = document.getElementById('scene');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+
+  let running = true;
+  let speed = 1;
+  let facing = 1;          // 1 = right, -1 = left
+  let t = 0;               // animation phase
+  let worldX = 0;          // for parallax ground scroll
+  let waveTimer = 0;       // brief wave gesture countdown
+
+  const groundY = H - 70;
+
+  // --- Background star field (static, generated once) ---
+  const stars = Array.from({ length: 70 }, () => ({
+    x: Math.random() * W,
+    y: Math.random() * (groundY - 40),
+    r: Math.random() * 1.4 + 0.3,
+    a: Math.random() * 0.6 + 0.2
+  }));
+
+  function drawBackground() {
+    // sky already from canvas bg, add stars
+    for (const s of stars) {
+      ctx.globalAlpha = s.a;
+      ctx.fillStyle = '#bfe9ff';
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    // distant hills
+    ctx.fillStyle = 'rgba(70,214,255,0.07)';
+    ctx.beginPath();
+    ctx.moveTo(0, groundY);
+    for (let x = 0; x <= W; x += 20) {
+      const y = groundY - 30 - 25 * Math.sin((x + worldX * 0.2) * 0.012);
+      ctx.lineTo(x, y);
+    }
+    ctx.lineTo(W, groundY);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  function drawGround() {
+    ctx.fillStyle = 'rgba(255,255,255,0.04)';
+    ctx.fillRect(0, groundY, W, H - groundY);
+    ctx.strokeStyle = 'rgba(70,214,255,0.35)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, groundY);
+    ctx.lineTo(W, groundY);
+    ctx.stroke();
+
+    // moving floor dashes for sense of motion
+    ctx.strokeStyle = 'rgba(70,214,255,0.18)';
+    ctx.lineWidth = 3;
+    const spacing = 60;
+    const offset = (worldX % spacing + spacing) % spacing;
+    for (let x = -offset; x < W; x += spacing) {
+      ctx.beginPath();
+      ctx.moveTo(x, groundY + 22);
+      ctx.lineTo(x + 26, groundY + 22);
+      ctx.stroke();
+    }
+  }
+
+  // Draw the robot centered at (cx, baseY) where baseY is foot contact line.
+  function drawRobot(cx, baseY) {
+    const swing = Math.sin(t);            // leg/arm swing
+    const swing2 = Math.sin(t + Math.PI); // opposite phase
+    const bob = Math.abs(Math.sin(t)) * 4; // vertical body bob
+    const bodyY = baseY - 90 - bob;
+
+    ctx.save();
+    ctx.translate(cx, 0);
+    ctx.scale(facing, 1);   // flip horizontally based on direction
+
+    const metal = '#cdd6f4';
+    const metalDark = '#8b93b8';
+    const accent = '#46d6ff';
+
+    // shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.beginPath();
+    ctx.ellipse(0, baseY + 6, 42 - bob, 8, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // legs (hip at bodyY+50)
+    const hipY = bodyY + 50;
+    drawLeg(-10, hipY, baseY, swing, metalDark, accent);
+    drawLeg(10, hipY, baseY, swing2, metal, accent);
+
+    // body
+    roundRect(-30, bodyY, 60, 60, 12);
+    ctx.fillStyle = metal;
+    ctx.fill();
+    ctx.fillStyle = metalDark;
+    roundRect(-30, bodyY + 38, 60, 22, 10);
+    ctx.fill();
+
+    // chest light
+    ctx.fillStyle = accent;
+    ctx.beginPath();
+    ctx.arc(0, bodyY + 22, 9, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.8)';
+    ctx.beginPath();
+    ctx.arc(-3, bodyY + 19, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // arms (shoulder at bodyY+10). One arm waves if waveTimer active.
+    const waving = waveTimer > 0;
+    drawArm(-26, bodyY + 12, swing2 * 0.8, metalDark, accent, false);
+    drawArm(26, bodyY + 12, swing * 0.8, metal, accent, waving);
+
+    // neck + head
+    ctx.fillStyle = metalDark;
+    ctx.fillRect(-6, bodyY - 12, 12, 14);
+    roundRect(-26, bodyY - 52, 52, 44, 12);
+    ctx.fillStyle = metal;
+    ctx.fill();
+
+    // visor
+    ctx.fillStyle = '#101830';
+    roundRect(-19, bodyY - 44, 38, 20, 8);
+    ctx.fill();
+
+    // eyes
+    const blink = (Math.sin(t * 0.6) > 0.97) ? 0.2 : 1;
+    ctx.fillStyle = accent;
+    ctx.beginPath();
+    ctx.ellipse(-8, bodyY - 34, 4, 5 * blink, 0, 0, Math.PI * 2);
+    ctx.ellipse(8, bodyY - 34, 4, 5 * blink, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // antenna
+    ctx.strokeStyle = metalDark;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(0, bodyY - 52);
+    ctx.lineTo(0, bodyY - 66);
+    ctx.stroke();
+    ctx.fillStyle = accent;
+    ctx.beginPath();
+    ctx.arc(0, bodyY - 70, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  function drawLeg(x, hipY, baseY, swing, color, accent) {
+    const legLen = baseY - hipY;
+    const angle = swing * 0.5;                  // thigh angle
+    const kneeX = x + Math.sin(angle) * legLen * 0.5;
+    const kneeY = hipY + Math.cos(angle) * legLen * 0.5;
+    // lift foot a bit when swinging forward
+    const lift = Math.max(0, swing) * 10;
+    const footX = kneeX + Math.sin(angle * 0.6) * legLen * 0.5;
+    const footY = baseY - lift;
+
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 11;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(x, hipY);
+    ctx.lineTo(kneeX, kneeY);
+    ctx.lineTo(footX, footY);
+    ctx.stroke();
+
+    // foot
+    ctx.fillStyle = accent;
+    ctx.beginPath();
+    ctx.ellipse(footX + 4, footY, 12, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  function drawArm(x, shoulderY, swing, color, accent, waving) {
+    let elbowX, elbowY, handX, handY;
+    if (waving) {
+      // raise the arm up and oscillate the forearm
+      const w = Math.sin(t * 6) * 0.5;
+      elbowX = x + 18;
+      elbowY = shoulderY - 18;
+      handX = elbowX + 16 + w * 6;
+      handY = elbowY - 18 + Math.abs(w) * 4;
+    } else {
+      const angle = swing * 0.7;
+      elbowX = x + Math.sin(angle) * 22;
+      elbowY = shoulderY + Math.cos(angle) * 22;
+      handX = elbowX + Math.sin(angle * 1.2) * 20;
+      handY = elbowY + Math.cos(angle * 1.2) * 20;
+    }
+
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 9;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(x, shoulderY);
+    ctx.lineTo(elbowX, elbowY);
+    ctx.lineTo(handX, handY);
+    ctx.stroke();
+
+    ctx.fillStyle = accent;
+    ctx.beginPath();
+    ctx.arc(handX, handY, 6, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  function roundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  let last = performance.now();
+  function frame(now) {
+    const dt = Math.min(0.05, (now - last) / 1000);
+    last = now;
+
+    if (running) {
+      t += dt * 6 * speed;
+      worldX += dt * 80 * speed * facing;  // ground scrolls opposite to facing
+      if (waveTimer > 0) waveTimer -= dt;
+    }
+
+    ctx.clearRect(0, 0, W, H);
+    drawBackground();
+    drawGround();
+    drawRobot(W / 2, groundY);
+
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  // --- Controls ---
+  const toggleBtn = document.getElementById('toggle');
+  toggleBtn.addEventListener('click', () => {
+    running = !running;
+    toggleBtn.textContent = running ? 'Pause' : 'Play';
+  });
+
+  document.getElementById('speed').addEventListener('input', (e) => {
+    speed = parseFloat(e.target.value);
+  });
+
+  document.getElementById('dir').addEventListener('click', () => {
+    facing *= -1;
+  });
+
+  canvas.addEventListener('click', () => {
+    waveTimer = 1.6;
+  });
+
+  // Keyboard niceties
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'Space') { e.preventDefault(); toggleBtn.click(); }
+    if (e.code === 'ArrowLeft') facing = -1;
+    if (e.code === 'ArrowRight') facing = 1;
+  });
+})();
+</script>
+</body>
+</html>
